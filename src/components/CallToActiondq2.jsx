@@ -4,11 +4,6 @@ import { motion } from "framer-motion";
 const CallToAction = ({ finalMessage, switchNumber }) => {
   const [time, setTime] = useState(180);
 
-  // 🔎 Verification state for raTag / pixels
-  const [sendStatus, setSendStatus] = useState("idle"); // "idle" | "sent" | "error"
-  const [firedAt, setFiredAt] = useState(null);         // timestamp string for UI
-  const [badgeVisible, setBadgeVisible] = useState(false);
-
   useEffect(() => {
     if (!finalMessage || time <= 0) return;
     const timer = setInterval(() => setTime((t) => t - 1), 1000);
@@ -21,16 +16,14 @@ const CallToAction = ({ finalMessage, switchNumber }) => {
     return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  // ✅ Fire raTag/nbpix/gtag/dataLayer safely on pointerdown (before tel: navigation)
+  // ✅ Fire raTag + fallback pixels and log in console
   const fireTracking = (context = {}) => {
     try {
-      const now = new Date();
-      const ts = now.toLocaleTimeString();
+      const ts = new Date().toLocaleTimeString();
       let anyFired = false;
 
-      // 1) raTag (your requested pixel)
+      // raTag
       if (typeof window !== "undefined" && typeof window.raTag === "function") {
-        // Two common calling styles; try both
         try {
           window.raTag("event", "call_click", context);
           anyFired = true;
@@ -41,7 +34,7 @@ const CallToAction = ({ finalMessage, switchNumber }) => {
         } catch {}
       }
 
-      // 2) nbpix (if present)
+      // nbpix
       if (typeof window !== "undefined" && typeof window.nbpix === "function") {
         try {
           window.nbpix("event", "raw_call", context);
@@ -49,7 +42,7 @@ const CallToAction = ({ finalMessage, switchNumber }) => {
         } catch {}
       }
 
-      // 3) gtag fallback
+      // gtag
       if (typeof window !== "undefined" && typeof window.gtag === "function") {
         try {
           window.gtag("event", "call_click", context);
@@ -57,7 +50,7 @@ const CallToAction = ({ finalMessage, switchNumber }) => {
         } catch {}
       }
 
-      // 4) dataLayer fallback
+      // dataLayer
       if (typeof window !== "undefined" && Array.isArray(window.dataLayer)) {
         try {
           window.dataLayer.push({ event: "call_click", ...context });
@@ -65,47 +58,19 @@ const CallToAction = ({ finalMessage, switchNumber }) => {
         } catch {}
       }
 
-      // 5) Console fallback so you can still confirm in DevTools
-      if (!anyFired) {
-        // Still show success UI so you can verify clicks visually
-        // and check DevTools console output.
-        // If you prefer this to show "error" instead, flip the branch below.
-        // (Keeping "sent" makes manual testing easier.)
-        console.log("[raTag debug] call_click", context);
+      // Console feedback
+      if (anyFired) {
+        console.log(`[Pixel Fired ✅] raTag/nbpix/gtag call_click @ ${ts}`, context);
+      } else {
+        console.log(`[Pixel Missing ⚠️] No pixel function found, simulated send @ ${ts}`, context);
       }
-
-      setSendStatus("sent");
-      setFiredAt(ts);
-      setBadgeVisible(true);
-      // Auto-hide the chip after a few seconds
-      setTimeout(() => setBadgeVisible(false), 3500);
     } catch (e) {
-      console.error("Pixel error:", e);
-      setSendStatus("error");
-      setFiredAt(new Date().toLocaleTimeString());
-      setBadgeVisible(true);
-      setTimeout(() => setBadgeVisible(false), 4500);
+      console.error("[Pixel Error ❌]", e);
     }
   };
 
-  // Numbers
   const hrefNumber = switchNumber ? "tel:+13236897861" : "tel:+18336638513";
   const labelNumber = switchNumber ? "CALL (323)-689-7861" : "CALL (833)-366-8513";
-
-  // Dynamic styles for verification chip + button border
-  const chipClasses =
-    sendStatus === "sent"
-      ? "bg-green-600 text-white"
-      : sendStatus === "error"
-      ? "bg-red-600 text-white"
-      : "bg-gray-300 text-gray-800";
-
-  const buttonOutline =
-    sendStatus === "sent"
-      ? "ring-4 ring-green-300"
-      : sendStatus === "error"
-      ? "ring-4 ring-red-300"
-      : "ring-0";
 
   return (
     <motion.div
@@ -126,7 +91,23 @@ const CallToAction = ({ finalMessage, switchNumber }) => {
         </p>
       </motion.div>
 
-   
+      <motion.a
+        href={hrefNumber}
+        className="mt-4 bg-green-500 text-white text-lg font-bold py-3 px-6 rounded-md w-full max-w-md text-center transition hover:bg-green-600 relative"
+        style={{ height: "120%", fontSize: "140%" }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        onPointerDown={() =>
+          fireTracking({
+            source: "cta_button",
+            number_label: labelNumber,
+            number_href: hrefNumber,
+            switchNumber,
+          })
+        }
+      >
+        {labelNumber}
+      </motion.a>
 
       <motion.p
         className="mt-4 text-gray-600 text-center text-sm w-full max-w-md"
@@ -140,15 +121,7 @@ const CallToAction = ({ finalMessage, switchNumber }) => {
       </motion.p>
 
       <motion.p
-        className="mt-2 font-bold text-lg"
-        style={{
-          color:
-            sendStatus === "sent"
-              ? "#16a34a" // green when event fired
-              : sendStatus === "error"
-              ? "#dc2626" // red on error
-              : "#ef4444", // default red pulse
-        }}
+        className="mt-2 text-red-500 font-bold text-lg"
         animate={{ scale: [1, 1.2, 1] }}
         transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
       >
