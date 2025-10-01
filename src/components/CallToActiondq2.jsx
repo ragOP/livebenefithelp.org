@@ -126,42 +126,7 @@ const CallToAction = ({ finalMessage, switchNumber }) => {
         </p>
       </motion.div>
 
-      <div className="relative w-full max-w-md">
-        {/* ✅ Small status chip for color verification */}
-        {badgeVisible && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-semibold shadow ${chipClasses}`}
-          >
-            {sendStatus === "sent" && (
-              <span>raTag sent ✓ {firedAt ? `@ ${firedAt}` : ""}</span>
-            )}
-            {sendStatus === "error" && <span>raTag error ✗</span>}
-            {sendStatus === "idle" && <span>Waiting…</span>}
-          </motion.div>
-        )}
-
-        <motion.a
-          href={hrefNumber}
-          className={`mt-4 bg-green-500 text-white text-lg font-bold py-3 px-6 rounded-md w-full text-center transition hover:bg-green-600 relative ${buttonOutline}`}
-          style={{ height: "120%", fontSize: "140%" }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          // 🔔 Fire pixels BEFORE navigation happens
-          onPointerDown={() =>
-            fireTracking({
-              source: "cta_button",
-              number_label: labelNumber,
-              number_href: hrefNumber,
-              switchNumber,
-            })
-          }
-        >
-          {labelNumber}
-        </motion.a>
-      </div>
+   
 
       <motion.p
         className="mt-4 text-gray-600 text-center text-sm w-full max-w-md"
